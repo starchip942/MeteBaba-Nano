@@ -1,0 +1,806 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}[hidden]{display:none!important}</style>
+</head>
+<body>
+<title>Mete Baba AI Labs</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Plus+Jakarta+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: full-height chat app: top bar / scrolling thread in a 44rem column / docked composer. İznik cobalt on cool porcelain. */
+:root {
+  --bg: #f6f7fa;
+  --panel: #ffffff;
+  --ink: #131a2e;
+  --muted: #646d82;
+  --faint: #9aa2b3;
+  --line: #e3e7ee;
+  --user-bubble: #e9edf7;
+  --accent: #2443b0;
+  --accent-ink: #ffffff;
+  --turq: #0d8a8c;
+  --shadow: 0 1px 2px rgba(19, 26, 46, 0.05), 0 8px 24px rgba(19, 26, 46, 0.06);
+  --font-display: "Bricolage Grotesque", "Plus Jakarta Sans", system-ui, sans-serif;
+  --font-ui: "Plus Jakarta Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f131c; --panel: #171c28; --ink: #e7ebf3; --muted: #9aa3b6; --faint: #697289; --line: #252c3b;
+    --user-bubble: #222a3d; --accent: #7f98ff; --accent-ink: #0f131c; --turq: #45c7c3;
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.35);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f131c; --panel: #171c28; --ink: #e7ebf3; --muted: #9aa3b6; --faint: #697289; --line: #252c3b;
+  --user-bubble: #222a3d; --accent: #7f98ff; --accent-ink: #0f131c; --turq: #45c7c3;
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.35);
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-ui);
+  font-size: 15px;
+  line-height: 1.6;
+}
+button { font: inherit; color: inherit; cursor: pointer; }
+button:focus-visible, textarea:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.app { height: 100%; display: grid; grid-template-rows: auto 1fr auto; }
+.gutter {
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+
+/* ---- top bar ---- */
+.bar { border-bottom: 1px solid var(--line); background: var(--bg); position: relative; z-index: 5; }
+.bar-in { height: 56px; display: flex; align-items: center; gap: 0.75rem; }
+.brand { display: flex; align-items: center; gap: 0.55rem; white-space: nowrap; font-family: var(--font-display); font-weight: 700; font-size: 1.15rem; letter-spacing: -0.01em; }
+.mark { width: 28px; height: 28px; flex: none; }
+.model {
+  display: inline-flex; align-items: center; gap: 0.4rem; font-size: 0.8rem; font-weight: 500; color: var(--muted);
+  padding: 0.2rem 0.6rem; border: 1px solid var(--line); border-radius: 999px; background: var(--panel);
+}
+.model .led { width: 7px; height: 7px; border-radius: 50%; background: var(--faint); }
+.model.ready .led { background: var(--turq); }
+.spacer { flex: 1; }
+.icon-btn {
+  display: inline-flex; align-items: center; gap: 0.45rem; height: 34px; padding: 0 0.7rem;
+  border: 1px solid var(--line); border-radius: 9px; background: var(--panel); font-size: 0.85rem; font-weight: 500;
+}
+.icon-btn:hover { border-color: var(--faint); }
+.icon-btn svg { width: 16px; height: 16px; }
+
+.menu {
+  position: absolute; top: 52px; right: max(16px, env(safe-area-inset-right, 0px)); width: min(19rem, calc(100vw - 32px));
+  background: var(--panel); border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow);
+  padding: 1rem; display: grid; gap: 1rem;
+}
+.menu h3 { margin: 0; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); font-weight: 600; }
+.field { display: grid; gap: 0.3rem; font-size: 0.875rem; }
+.field-top { display: flex; justify-content: space-between; }
+.field output { color: var(--muted); font-variant-numeric: tabular-nums; }
+.field input { width: 100%; accent-color: var(--accent); }
+
+/* ---- thread ---- */
+.scroll { overflow-y: auto; overscroll-behavior: contain; }
+.thread { max-width: 44rem; margin: 0 auto; padding-block: 2rem 1.5rem; display: grid; gap: 1.6rem; }
+.empty { display: grid; place-items: center; text-align: center; gap: 0.9rem; padding-block: 18vh 2rem; }
+.empty .mark { width: 52px; height: 52px; }
+.empty h1 { margin: 0; font-family: var(--font-display); font-weight: 600; font-size: clamp(1.6rem, 4vw, 2.1rem); letter-spacing: -0.02em; text-wrap: balance; }
+
+.loader { width: min(22rem, 100%); display: grid; gap: 0.5rem; margin-top: 0.5rem; text-align: left; }
+.loader-row { display: flex; justify-content: space-between; gap: 1rem; font-size: 0.85rem; font-weight: 500; }
+#load-pct { font-variant-numeric: tabular-nums; color: var(--muted); }
+.track { height: 6px; border-radius: 999px; background: var(--line); overflow: hidden; }
+#load-fill { height: 100%; width: 0; border-radius: inherit; background: linear-gradient(90deg, var(--accent), var(--turq)); transition: width 0.2s ease-out; }
+.loader-sub { font-size: 0.78rem; color: var(--faint); font-variant-numeric: tabular-nums; min-height: 1.2em; }
+.loader-sub.warn { color: var(--muted); }
+.nojs { width: min(24rem, 100%); margin-top: 0.5rem; padding: 0.9rem 1rem; border: 1px solid var(--line); border-radius: 12px; background: var(--panel); text-align: left; font-size: 0.9rem; display: grid; gap: 0.35rem; }
+.nojs strong { font-weight: 600; }
+.nojs p { margin: 0; color: var(--muted); }
+
+.msg { display: grid; gap: 0.35rem; min-width: 0; }
+.msg.user { justify-items: end; }
+.msg.user .body {
+  background: var(--user-bubble); padding: 0.6rem 1rem; border-radius: 18px 18px 6px 18px; max-width: min(85%, 34rem);
+  white-space: pre-wrap; overflow-wrap: anywhere;
+}
+.msg.bot { grid-template-columns: 28px 1fr; column-gap: 0.85rem; align-items: start; }
+.msg.bot .mark { margin-top: 0.15rem; }
+.msg.bot .col { display: grid; gap: 0.35rem; min-width: 0; }
+.msg.bot .body { overflow-wrap: anywhere; padding-top: 0.15rem; min-height: 1.6em; }
+.cursor { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--ink); margin-left: 4px; vertical-align: 0.05em; animation: pulse 1s ease-in-out infinite; }
+.typing { display: inline-flex; gap: 4px; padding-top: 0.55rem; }
+.typing i { width: 6px; height: 6px; border-radius: 50%; background: var(--faint); animation: pulse 1.2s ease-in-out infinite; }
+.typing i:nth-child(2) { animation-delay: 0.15s; }
+.typing i:nth-child(3) { animation-delay: 0.3s; }
+@keyframes pulse { 0%, 100% { opacity: 0.35; transform: scale(0.85); } 50% { opacity: 1; transform: scale(1); } }
+.actions { display: flex; gap: 0.25rem; opacity: 0; transition: opacity 0.15s; }
+.msg.bot:hover .actions, .msg.bot:focus-within .actions, .msg.bot.last .actions { opacity: 1; }
+.act {
+  display: inline-flex; align-items: center; gap: 0.35rem; border: 0; background: none; color: var(--muted);
+  font-size: 0.8rem; padding: 0.25rem 0.45rem; border-radius: 7px;
+}
+.act:hover { background: var(--user-bubble); color: var(--ink); }
+.act svg { width: 15px; height: 15px; }
+
+/* ---- composer ---- */
+.dock { padding-bottom: 0.9rem; background: linear-gradient(to bottom, transparent, var(--bg) 1.2rem); }
+.composer {
+  max-width: 44rem; margin: 0 auto; display: flex; align-items: flex-end; gap: 0.5rem;
+  background: var(--panel); border: 1px solid var(--line); border-radius: 16px; box-shadow: var(--shadow);
+  padding: 0.5rem 0.5rem 0.5rem 1rem;
+}
+.composer:focus-within { border-color: var(--faint); }
+#msg {
+  flex: 1; min-width: 0; border: 0; outline: none; resize: none; background: transparent; color: var(--ink);
+  font: inherit; font-size: 1rem; line-height: 1.5; padding: 0.45rem 0; max-height: 10rem;
+}
+#msg:focus-visible { outline: none; }
+#msg::placeholder { color: var(--faint); }
+#send {
+  width: 38px; height: 38px; flex: none; border: 0; border-radius: 11px; background: var(--accent); color: var(--accent-ink);
+  display: grid; place-items: center;
+}
+#send:disabled { opacity: 0.35; cursor: default; }
+#send svg { width: 18px; height: 18px; }
+#send .stop { display: none; }
+#send.busy .go { display: none; }
+#send.busy .stop { display: block; }
+.fine { max-width: 44rem; margin: 0.5rem auto 0; text-align: center; font-size: 0.75rem; color: var(--faint); }
+.fine.err { color: #d0473a; }
+
+@media (max-width: 30rem) {
+  .model { display: none; }
+  .icon-btn .lbl { display: none; }
+  .empty { padding-block: 12vh 1rem; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cursor, .typing i { animation: none; }
+  #load-fill, .actions { transition: none; }
+}
+</style>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="logo" viewBox="0 0 32 32">
+      <rect width="32" height="32" rx="9" fill="var(--accent)"/>
+      <path d="M11 13.5v8.5M16 13.5v8.5M21 13.5v8.5M11 16a2.5 2.5 0 0 1 5 0M16 16a2.5 2.5 0 0 1 5 0" stroke="var(--accent-ink)" stroke-width="2.4" stroke-linecap="round" fill="none"/>
+      <circle cx="23.5" cy="8.5" r="2.4" fill="var(--turq)"/>
+    </symbol>
+  </defs>
+</svg>
+
+<div class="app">
+  <header class="bar gutter">
+    <div class="bar-in">
+      <div class="brand"><svg class="mark" aria-hidden="true"><use href="#logo"/></svg>Mete Baba AI Labs</div>
+      <span class="model" id="model"><span class="led"></span><span id="model-name">MeteBaba-Nano</span></span>
+      <div class="spacer"></div>
+      <button class="icon-btn" id="settings-btn" type="button" aria-expanded="false" aria-controls="menu">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg>
+        <span class="lbl">Ayarlar</span>
+      </button>
+      <button class="icon-btn" id="new-btn" type="button">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+        <span class="lbl">Yeni sohbet</span>
+      </button>
+    </div>
+    <div class="menu" id="menu" hidden>
+      <h3>Yanıt ayarları</h3>
+      <label class="field" for="temp">
+        <span class="field-top"><span>Yaratıcılık</span><output id="temp-v">0.80</output></span>
+        <input id="temp" type="range" min="0.1" max="1.5" step="0.05" value="0.8">
+      </label>
+      <label class="field" for="maxt">
+        <span class="field-top"><span>En fazla uzunluk</span><output id="maxt-v">64 token</output></span>
+        <input id="maxt" type="range" min="16" max="120" step="8" value="64">
+      </label>
+    </div>
+  </header>
+
+  <main class="scroll gutter" id="scroll">
+    <div class="thread" id="thread" role="log" aria-live="polite">
+      <div class="empty" id="empty">
+        <svg class="mark" aria-hidden="true"><use href="#logo"/></svg>
+        <h1>Bugün ne konuşalım?</h1>
+        <div class="loader" id="loader" role="progressbar" aria-label="Model yükleniyor" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+          <div class="loader-row"><span id="load-stage">MeteBaba-Nano başlatılıyor</span><span id="load-pct">%0</span></div>
+          <div class="track"><div id="load-fill"></div></div>
+          <div class="loader-sub warn" id="load-sub">%0'da kalırsa dosyayı WhatsApp önizlemesinde değil, Chrome veya Safari'de açın.</div>
+        </div>
+        <noscript>
+          <style>.loader { display: none; }</style>
+          <div class="nojs">
+            <strong>Bu görüntüleyici sayfayı çalıştıramıyor.</strong>
+            <p>MeteBaba-Nano tarayıcıda çalışır. Dosyayı indirip Chrome, Safari, Edge veya Firefox ile açın. WhatsApp ve dosya önizlemeleri JavaScript çalıştırmaz.</p>
+          </div>
+        </noscript>
+      </div>
+    </div>
+  </main>
+
+  <footer class="dock gutter">
+    <form class="composer" id="form" autocomplete="off">
+      <label for="msg" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)">Mesaj</label>
+      <textarea id="msg" rows="1" placeholder="MeteBaba-Nano'ya mesaj yaz" spellcheck="false"></textarea>
+      <button id="send" type="submit" disabled aria-label="Gönder">
+        <svg class="go" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5.5 11.5 12 5l6.5 6.5"/></svg>
+        <svg class="stop" viewBox="0 0 24 24"><rect x="7" y="7" width="10" height="10" rx="2" fill="currentColor"/></svg>
+      </button>
+    </form>
+    <p class="fine" id="fine">Model yükleniyor…</p>
+  </footer>
+</div>
+
+<script>// Minimal GGUF reader + llama-architecture inference + SentencePiece (SPM) tokenizer.
+// Supports exactly what turkish-tiny-5m needs: F32/F16/Q8_0 tensors, MHA, interleaved RoPE.
+(function (root) {
+  "use strict";
+
+  // ---------- GGUF ----------
+  let F16_TABLE = null;
+  function f16Table() {
+    if (F16_TABLE) return F16_TABLE;
+    F16_TABLE = new Float32Array(65536);
+    for (let h = 0; h < 65536; h++) {
+      const s = (h & 0x8000) ? -1 : 1, e = (h >> 10) & 0x1f, m = h & 0x3ff;
+      F16_TABLE[h] = e === 0 ? s * m * 5.960464477539063e-8
+        : e === 31 ? (m ? NaN : s * Infinity)
+        : s * Math.pow(2, e - 15) * (1 + m / 1024);
+    }
+    return F16_TABLE;
+  }
+
+  function f16ToF32(src) {
+    const t = f16Table(), out = new Float32Array(src.length);
+    for (let i = 0; i < src.length; i++) out[i] = t[src[i]];
+    return out;
+  }
+
+  // Q8_0: blocks of 32 values, each block = f16 scale + 32 signed bytes.
+  function q8ToF32(bytes, n) {
+    const t = f16Table(), out = new Float32Array(n), i8 = new Int8Array(bytes.buffer, bytes.byteOffset, bytes.length);
+    for (let b = 0, o = 0; b < n / 32; b++, o += 34) {
+      const d = t[bytes[o] | (bytes[o + 1] << 8)], base = b * 32;
+      for (let j = 0; j < 32; j++) out[base + j] = d * i8[o + 2 + j];
+    }
+    return out;
+  }
+
+  function parseGGUF(buf) {
+    const dv = new DataView(buf), td = new TextDecoder();
+    let p = 0;
+    const u32 = () => { const v = dv.getUint32(p, true); p += 4; return v; };
+    // 64-bit reads without BigInt so older mobile browsers can parse the file.
+    const u64 = () => { const lo = dv.getUint32(p, true), hi = dv.getUint32(p + 4, true); p += 8; return hi * 4294967296 + lo; };
+    const str = () => { const n = u64(); const s = td.decode(new Uint8Array(buf, p, n)); p += n; return s; };
+    const scalar = {
+      0: () => dv.getUint8(p++), 1: () => dv.getInt8(p++),
+      2: () => { const v = dv.getUint16(p, true); p += 2; return v; },
+      3: () => { const v = dv.getInt16(p, true); p += 2; return v; },
+      4: u32, 5: () => { const v = dv.getInt32(p, true); p += 4; return v; },
+      6: () => { const v = dv.getFloat32(p, true); p += 4; return v; },
+      7: () => dv.getUint8(p++) !== 0, 8: str, 10: u64,
+      11: () => { const lo = dv.getUint32(p, true), hi = dv.getInt32(p + 4, true); p += 8; return hi * 4294967296 + lo; },
+      12: () => { const v = dv.getFloat64(p, true); p += 8; return v; },
+    };
+    const value = (t) => {
+      if (t === 9) {
+        const et = u32(), n = u64(), a = new Array(n);
+        for (let i = 0; i < n; i++) a[i] = value(et);
+        return a;
+      }
+      if (!scalar[t]) throw new Error("Unsupported GGUF value type " + t);
+      return scalar[t]();
+    };
+
+    if (u32() !== 0x46554747) throw new Error("Not a GGUF file");
+    const version = u32(), nTensors = u64(), nKV = u64();
+    const meta = {};
+    for (let i = 0; i < nKV; i++) { const k = str(); meta[k] = value(u32()); }
+    const infos = [];
+    for (let i = 0; i < nTensors; i++) {
+      const name = str(), nd = u32(), dims = [];
+      for (let d = 0; d < nd; d++) dims.push(u64());
+      infos.push({ name, dims, type: u32(), offset: u64() });
+    }
+    const align = meta["general.alignment"] || 32;
+    const base = Math.ceil(p / align) * align;
+    const tensors = {};
+    for (const t of infos) {
+      const n = t.dims.reduce((a, b) => a * b, 1), off = base + t.offset;
+      let data;
+      if (t.type === 0) data = new Float32Array(buf.slice(off, off + n * 4));
+      else if (t.type === 1) data = f16ToF32(new Uint16Array(buf.slice(off, off + n * 2)));
+      else if (t.type === 8) data = q8ToF32(new Uint8Array(buf, off, (n / 32) * 34), n);
+      else throw new Error(`Tensor ${t.name}: unsupported type ${t.type}`);
+      tensors[t.name] = { dims: t.dims, data };
+    }
+    return { version, meta, tensors };
+  }
+
+  // ---------- Tokenizer (llama.cpp SPM algorithm) ----------
+  class SPMTokenizer {
+    constructor(meta) {
+      this.pieces = meta["tokenizer.ggml.tokens"];
+      this.scores = meta["tokenizer.ggml.scores"];
+      this.types = meta["tokenizer.ggml.token_type"];
+      this.bos = meta["tokenizer.ggml.bos_token_id"];
+      this.eos = meta["tokenizer.ggml.eos_token_id"];
+      this.unk = meta["tokenizer.ggml.unknown_token_id"];
+      this.toId = new Map();
+      this.byteId = new Array(256);
+      this.byteVal = new Map();
+      this.pieces.forEach((pc, i) => {
+        const m = /^<0x([0-9A-F]{2})>$/.exec(pc);
+        if (this.types[i] === 6 && m) { this.byteId[parseInt(m[1], 16)] = i; this.byteVal.set(i, parseInt(m[1], 16)); }
+        else if (this.types[i] === 1) this.toId.set(pc, i);
+      });
+      this.enc = new TextEncoder();
+    }
+
+    // Same normalization the training text went through: collapse whitespace, dummy prefix, ▁ for spaces.
+    encode(text) {
+      text = text.replace(/\s+/g, " ").trim();
+      if (!text) return [];
+      const syms = Array.from("▁" + text.replace(/ /g, "▁"));
+      while (syms.length > 1) {
+        let best = -1, bestScore = -Infinity;
+        for (let i = 0; i < syms.length - 1; i++) {
+          const id = this.toId.get(syms[i] + syms[i + 1]);
+          if (id !== undefined && this.scores[id] > bestScore) { bestScore = this.scores[id]; best = i; }
+        }
+        if (best < 0) break;
+        syms.splice(best, 2, syms[best] + syms[best + 1]);
+      }
+      const ids = [];
+      for (const s of syms) {
+        const id = this.toId.get(s);
+        if (id !== undefined) ids.push(id);
+        else for (const b of this.enc.encode(s)) ids.push(this.byteId[b]);
+      }
+      return ids;
+    }
+
+    // Byte view of one token, so callers can decode byte-fallback runs correctly.
+    bytes(id) {
+      if (this.byteVal.has(id)) return [this.byteVal.get(id)];
+      if (this.types[id] !== 1) return [];
+      return Array.from(this.enc.encode(this.pieces[id].replace(/▁/g, " ")));
+    }
+
+    decode(ids) {
+      const out = [];
+      for (const id of ids) out.push(...this.bytes(id));
+      return new TextDecoder().decode(new Uint8Array(out));
+    }
+  }
+
+  // ---------- Model ----------
+  class LlamaModel {
+    constructor(gg) {
+      const m = gg.meta, T = gg.tensors;
+      if (m["general.architecture"] !== "llama") throw new Error("Only llama architecture is supported");
+      this.dim = m["llama.embedding_length"];
+      this.nLayers = m["llama.block_count"];
+      this.nHeads = m["llama.attention.head_count"];
+      this.ffn = m["llama.feed_forward_length"];
+      this.ctx = m["llama.context_length"];
+      this.eps = m["llama.attention.layer_norm_rms_epsilon"];
+      this.theta = m["llama.rope.freq_base"] || 10000;
+      this.hd = this.dim / this.nHeads;
+      this.vocab = T["token_embd.weight"].dims[1];
+      this.emb = T["token_embd.weight"].data;
+      this.outNorm = T["output_norm.weight"].data;
+      this.out = T["output.weight"].data;
+      this.layers = [];
+      for (let l = 0; l < this.nLayers; l++) {
+        const g = (n) => T[`blk.${l}.${n}.weight`].data;
+        this.layers.push({
+          an: g("attn_norm"), fn: g("ffn_norm"), q: g("attn_q"), k: g("attn_k"), v: g("attn_v"),
+          o: g("attn_output"), gate: g("ffn_gate"), up: g("ffn_up"), down: g("ffn_down"),
+          kc: new Float32Array(this.ctx * this.dim), vc: new Float32Array(this.ctx * this.dim),
+        });
+      }
+      this.params = Object.values(T).reduce((a, t) => a + t.data.length, 0);
+      const half = this.hd / 2;
+      this.cos = new Float32Array(this.ctx * half);
+      this.sin = new Float32Array(this.ctx * half);
+      for (let pos = 0; pos < this.ctx; pos++)
+        for (let j = 0; j < half; j++) {
+          const a = pos * Math.pow(this.theta, -2 * j / this.hd);
+          this.cos[pos * half + j] = Math.cos(a);
+          this.sin[pos * half + j] = Math.sin(a);
+        }
+      const d = this.dim;
+      this.x = new Float32Array(d); this.xb = new Float32Array(d); this.xb2 = new Float32Array(d);
+      this.qv = new Float32Array(d); this.att = new Float32Array(this.ctx);
+      this.h1 = new Float32Array(this.ffn); this.h3 = new Float32Array(this.ffn);
+      this.logits = new Float32Array(this.vocab);
+    }
+
+    static matvec(out, W, x, rows, cols) {
+      for (let r = 0; r < rows; r++) {
+        let s = 0;
+        const o = r * cols;
+        for (let c = 0; c < cols; c++) s += W[o + c] * x[c];
+        out[r] = s;
+      }
+    }
+
+    rmsnorm(out, x, w) {
+      let ss = 0;
+      for (let i = 0; i < x.length; i++) ss += x[i] * x[i];
+      const k = 1 / Math.sqrt(ss / x.length + this.eps);
+      for (let i = 0; i < x.length; i++) out[i] = x[i] * k * w[i];
+    }
+
+    rope(v, off, pos) {
+      const half = this.hd / 2;
+      for (let h = 0; h < this.nHeads; h++)
+        for (let j = 0; j < half; j++) {
+          const i = off + h * this.hd + 2 * j, c = this.cos[pos * half + j], s = this.sin[pos * half + j];
+          const a = v[i], b = v[i + 1];
+          v[i] = a * c - b * s;
+          v[i + 1] = a * s + b * c;
+        }
+    }
+
+    // Runs one token at position pos (0-based, < ctx) and returns the next-token logits.
+    forward(token, pos) {
+      const { dim: d, hd, nHeads, ffn, x, xb, xb2, qv, att } = this;
+      const mv = LlamaModel.matvec;
+      x.set(this.emb.subarray(token * d, token * d + d));
+      for (const L of this.layers) {
+        this.rmsnorm(xb, x, L.an);
+        mv(qv, L.q, xb, d, d);
+        const kOff = pos * d;
+        mv(L.kc.subarray(kOff, kOff + d), L.k, xb, d, d);
+        mv(L.vc.subarray(kOff, kOff + d), L.v, xb, d, d);
+        this.rope(qv, 0, pos);
+        this.rope(L.kc, kOff, pos);
+        const scale = 1 / Math.sqrt(hd);
+        for (let h = 0; h < nHeads; h++) {
+          const ho = h * hd;
+          let mx = -Infinity;
+          for (let t = 0; t <= pos; t++) {
+            let s = 0;
+            const ko = t * d + ho;
+            for (let i = 0; i < hd; i++) s += qv[ho + i] * L.kc[ko + i];
+            att[t] = s * scale;
+            if (att[t] > mx) mx = att[t];
+          }
+          let sum = 0;
+          for (let t = 0; t <= pos; t++) { att[t] = Math.exp(att[t] - mx); sum += att[t]; }
+          for (let i = 0; i < hd; i++) xb[ho + i] = 0;
+          for (let t = 0; t <= pos; t++) {
+            const a = att[t] / sum, vo = t * d + ho;
+            for (let i = 0; i < hd; i++) xb[ho + i] += a * L.vc[vo + i];
+          }
+        }
+        mv(xb2, L.o, xb, d, d);
+        for (let i = 0; i < d; i++) x[i] += xb2[i];
+        this.rmsnorm(xb, x, L.fn);
+        mv(this.h1, L.gate, xb, ffn, d);
+        mv(this.h3, L.up, xb, ffn, d);
+        for (let i = 0; i < ffn; i++) { const g = this.h1[i]; this.h1[i] = (g / (1 + Math.exp(-g))) * this.h3[i]; }
+        mv(xb2, L.down, this.h1, d, ffn);
+        for (let i = 0; i < d; i++) x[i] += xb2[i];
+      }
+      this.rmsnorm(xb, x, this.outNorm);
+      mv(this.logits, this.out, xb, this.vocab, d);
+      return this.logits;
+    }
+  }
+
+  // ---------- Sampling ----------
+  function sample(logits, { temperature = 0.8, topK = 40, topP = 0.95, repPenalty = 1.1, recent = [], rand = Math.random }) {
+    const l = Float32Array.from(logits);
+    for (const id of new Set(recent)) l[id] = l[id] > 0 ? l[id] / repPenalty : l[id] * repPenalty;
+    if (temperature <= 0) { let b = 0; for (let i = 1; i < l.length; i++) if (l[i] > l[b]) b = i; return { id: b, p: 1 }; }
+    const idx = Array.from(l.keys()).sort((a, b) => l[b] - l[a]).slice(0, Math.max(1, topK));
+    const mx = l[idx[0]];
+    let probs = idx.map((i) => Math.exp((l[i] - mx) / temperature));
+    let z = probs.reduce((a, b) => a + b, 0);
+    probs = probs.map((p) => p / z);
+    let cum = 0, cut = probs.length;
+    for (let i = 0; i < probs.length; i++) { cum += probs[i]; if (cum >= topP) { cut = i + 1; break; } }
+    z = probs.slice(0, cut).reduce((a, b) => a + b, 0);
+    let r = rand() * z;
+    for (let i = 0; i < cut; i++) { r -= probs[i]; if (r <= 0) return { id: idx[i], p: probs[i] }; }
+    return { id: idx[cut - 1], p: probs[cut - 1] };
+  }
+
+  const api = { parseGGUF, SPMTokenizer, LlamaModel, sample };
+  if (typeof module !== "undefined" && module.exports) module.exports = api;
+  else root.TinyLlama = api;
+})(typeof self !== "undefined" ? self : this);
+</script>
+<script>
+(() => {
+  "use strict";
+  const $ = (id) => document.getElementById(id);
+  // On claude.ai the GGUF ships base64-encoded (artifacts only serve text and media types);
+  // static hosts serve the raw .gguf. Either way the progress bar counts the known decoded size.
+  const MODEL_URL = "metebaba-nano-q8_0.gguf";
+  const MODEL_B64_BYTES = 6297888;
+  const CONTEXT_BUDGET = 72; // tokens of conversation fed before each reply
+  const MIN_REPLY_TOKENS = 24; // keep writing past a sentence end until the reply is at least this long
+  const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const ICON_COPY = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h9"/></svg>';
+  const ICON_REDO = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 1 1-2.34-5.66M20 4v5h-5"/></svg>';
+
+  let model = null, tok = null, busy = false, stop = false;
+  const convo = []; // {role: "user"|"bot", text, el}
+
+  const store = {
+    get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
+    set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} },
+  };
+
+  // ---- settings ----
+  const temp = $("temp"), maxt = $("maxt");
+  for (const [el, key] of [[temp, "mk-temp"], [maxt, "mk-maxt"]]) {
+    const v = store.get(key); if (v !== null) el.value = v;
+    el.addEventListener("input", () => { store.set(key, el.value); syncSettings(); });
+  }
+  function syncSettings() {
+    $("temp-v").textContent = Number(temp.value).toFixed(2);
+    $("maxt-v").textContent = maxt.value + " token";
+  }
+  syncSettings();
+  const menu = $("menu"), sbtn = $("settings-btn");
+  const setMenu = (open) => { menu.hidden = !open; sbtn.setAttribute("aria-expanded", String(open)); };
+  sbtn.addEventListener("click", (e) => { e.stopPropagation(); setMenu(menu.hidden); });
+  document.addEventListener("click", (e) => { if (!menu.hidden && !menu.contains(e.target)) setMenu(false); });
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape") setMenu(false); });
+
+  // ---- composer ----
+  const ta = $("msg"), send = $("send");
+  const grow = () => { ta.style.height = "auto"; ta.style.height = Math.min(ta.scrollHeight, 160) + "px"; };
+  const canSend = () => { send.disabled = !model || (!busy && !ta.value.trim()); };
+  ta.addEventListener("input", () => { grow(); canSend(); });
+  ta.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && !e.shiftKey && !e.isComposing) { e.preventDefault(); submitForm(); }
+  });
+  const submitForm = () => {
+    const f = $("form");
+    if (f.requestSubmit) f.requestSubmit();
+    else f.dispatchEvent(new Event("submit", { cancelable: true }));
+  };
+  const setChildren = (el, ...kids) => { el.textContent = ""; el.append(...kids); };
+  $("form").addEventListener("submit", (e) => {
+    e.preventDefault();
+    if (busy) { stop = true; return; }
+    const text = ta.value.replace(/\s+/g, " ").trim();
+    if (!text || !model) return;
+    ta.value = ""; grow();
+    addUser(text);
+    reply();
+  });
+  $("new-btn").addEventListener("click", () => {
+    if (busy) stop = true;
+    convo.length = 0;
+    setChildren($("thread"), $("empty"));
+    $("empty").hidden = false;
+    ta.focus();
+  });
+
+  // ---- thread ----
+  const scroller = $("scroll");
+  const nearBottom = () => scroller.scrollHeight - scroller.scrollTop - scroller.clientHeight < 120;
+  const toBottom = () => { scroller.scrollTop = scroller.scrollHeight; };
+
+  function addUser(text) {
+    $("empty").hidden = true;
+    const el = document.createElement("div");
+    el.className = "msg user";
+    const b = document.createElement("div"); b.className = "body"; b.textContent = text;
+    el.append(b);
+    $("thread").append(el);
+    convo.push({ role: "user", text, el });
+    toBottom();
+  }
+
+  function addBot() {
+    document.querySelectorAll(".msg.bot.last").forEach((n) => n.classList.remove("last"));
+    const el = document.createElement("div");
+    el.className = "msg bot last";
+    el.innerHTML = '<svg class="mark" aria-hidden="true"><use href="#logo"/></svg><div class="col"><div class="body"><span class="typing" aria-label="Yazıyor"><i></i><i></i><i></i></span></div><div class="actions" hidden></div></div>';
+    $("thread").append(el);
+    const m = { role: "bot", text: "", el };
+    convo.push(m);
+    toBottom();
+    return m;
+  }
+
+  function finishBot(m) {
+    const acts = m.el.querySelector(".actions");
+    acts.innerHTML = "";
+    const copy = document.createElement("button");
+    copy.type = "button"; copy.className = "act"; copy.innerHTML = ICON_COPY + "<span>Kopyala</span>";
+    copy.addEventListener("click", () => {
+      const label = copy.querySelector("span");
+      const done = () => { label.textContent = "Kopyalandı"; setTimeout(() => (label.textContent = "Kopyala"), 1400); };
+      const fallback = () => {
+        const r = document.createRange(); r.selectNodeContents(m.el.querySelector(".body"));
+        const s = getSelection(); s.removeAllRanges(); s.addRange(r);
+      };
+      try { navigator.clipboard.writeText(m.text).then(done, fallback); } catch (e) { fallback(); }
+    });
+    const redo = document.createElement("button");
+    redo.type = "button"; redo.className = "act"; redo.innerHTML = ICON_REDO + "<span>Yeniden oluştur</span>";
+    redo.addEventListener("click", () => {
+      if (busy || convo[convo.length - 1] !== m) return;
+      convo.pop(); m.el.remove();
+      reply();
+    });
+    acts.append(copy, redo);
+    acts.hidden = false;
+  }
+
+  // ---- generation ----
+  // Each message is one "sentence" to the model: <s> text </s>. The reply is a fresh <s> … </s>.
+  async function reply() {
+    busy = true; stop = false;
+    send.classList.add("busy"); send.setAttribute("aria-label", "Durdur"); canSend();
+    const m = addBot();
+    const body = m.el.querySelector(".body");
+
+    let ctxIds = [];
+    for (const c of convo) if (c !== m && c.text) ctxIds.push(tok.bos, ...tok.encode(c.text), tok.eos);
+    ctxIds = ctxIds.slice(-CONTEXT_BUDGET);
+    const seq = [...ctxIds, tok.bos];
+
+    let pos = 0, logits = null;
+    const feed = (id) => {
+      if (pos === model.ctx) {
+        const keep = Math.floor(model.ctx / 2);
+        pos = 0;
+        for (let i = seq.length - 1 - keep; i < seq.length - 1; i++) model.forward(seq[i], pos++);
+      }
+      logits = model.forward(id, pos++);
+    };
+    for (let i = 0; i < seq.length; i++) {
+      feed(seq[i]);
+      if (i % 12 === 11) await new Promise((r) => setTimeout(r, 0));
+    }
+    await new Promise((r) => setTimeout(r, reduceMotion ? 0 : 280));
+
+    const dec = new TextDecoder();
+    const out = [];
+    let text = "", n = 0, sentenceLen = 0;
+    const cursor = document.createElement("span"); cursor.className = "cursor";
+    const textNode = document.createTextNode("");
+    const maxNew = Number(maxt.value), T = Number(temp.value);
+    while (n < maxNew && !stop) {
+      if (sentenceLen < 3) logits[tok.eos] = -Infinity; // no empty or one-word sentences
+      const { id } = TinyLlama.sample(logits, { temperature: T, recent: seq.slice(-32) });
+      if (id === tok.eos) {
+        if (n >= MIN_REPLY_TOKENS || maxNew - n < 12) break;
+        seq.push(id); feed(id);
+        seq.push(tok.bos); feed(tok.bos);
+        sentenceLen = 0;
+        continue;
+      }
+      n++; sentenceLen++;
+      seq.push(id); out.push(id);
+      const piece = dec.decode(new Uint8Array(tok.bytes(id)), { stream: true });
+      if (piece) {
+        text = (text + piece).replace(/^ /, "");
+        if (!textNode.parentNode) setChildren(body, textNode, cursor);
+        const stick = nearBottom();
+        textNode.data = text;
+        if (stick) toBottom();
+      }
+      feed(id);
+      await new Promise((r) => setTimeout(r, reduceMotion ? 0 : 26));
+    }
+    cursor.remove();
+    m.text = tok.decode(out).trim();
+    if (!m.text) body.textContent = "…";
+    else textNode.data = m.text;
+    finishBot(m);
+    busy = false;
+    send.classList.remove("busy"); send.setAttribute("aria-label", "Gönder"); canSend();
+  }
+
+  // ---- loading ----
+  const tick = () => new Promise((r) => setTimeout(r, 0));
+  const mb = (n) => (n / 1e6).toLocaleString("tr-TR", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+  function setProgress(frac, stage, sub) {
+    const pct = Math.round(Math.min(1, frac) * 100);
+    $("load-fill").style.width = pct + "%";
+    $("load-pct").textContent = "%" + pct;
+    $("load-stage").textContent = stage;
+    $("load-sub").textContent = sub || "";
+    $("load-sub").classList.remove("warn");
+    $("loader").setAttribute("aria-valuenow", String(pct));
+  }
+
+  // Decodes in 1 MB slices so the progress bar keeps painting.
+  async function decodeBase64(text, from, to) {
+    const pad = text.endsWith("==") ? 2 : text.endsWith("=") ? 1 : 0;
+    const out = new Uint8Array((text.length / 4) * 3 - pad);
+    const CHUNK = 1 << 20;
+    let o = 0;
+    for (let i = 0; i < text.length; i += CHUNK) {
+      const bin = atob(text.slice(i, i + CHUNK));
+      for (let j = 0; j < bin.length; j++) out[o++] = bin.charCodeAt(j);
+      setProgress(from + (to - from) * Math.min(1, (i + CHUNK) / text.length), "Model hazırlanıyor");
+      await tick();
+    }
+    return out;
+  }
+
+  async function load() {
+    try {
+      // Standalone builds embed the model in a <script id="model-b64"> block; the hosted page fetches it.
+      const inline = document.getElementById("model-b64");
+      setProgress(0, inline ? "Model hazırlanıyor" : "MeteBaba-Nano indiriliyor");
+      setTimeout(() => {
+        if (model || $("fine").classList.contains("err")) return;
+        $("load-sub").textContent = "Beklenenden uzun sürüyor. Sayfayı yenileyin ya da dosyayı başka bir tarayıcıda açın.";
+        $("load-sub").classList.add("warn");
+      }, 25000);
+      let b64text, rawBytes = null, from = 0;
+      if (inline) {
+        b64text = inline.textContent;
+      } else {
+        const res = await fetch(MODEL_URL);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        // Measure against the known decoded size: content-length may describe a compressed transfer.
+        const total = MODEL_B64_BYTES;
+        const reader = res.body.getReader();
+        const parts = [];
+        let got = 0;
+        setProgress(0, "MeteBaba-Nano indiriliyor", `0,0 / ${mb(total)} MB`);
+        for (;;) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          parts.push(value); got += value.length;
+          setProgress(0.9 * Math.min(1, got / total), "MeteBaba-Nano indiriliyor", `${mb(Math.min(got, total))} / ${mb(total)} MB`);
+        }
+        const all = new Uint8Array(got);
+        let off = 0; for (const p of parts) { all.set(p, off); off += p.length; }
+        if (MODEL_URL.endsWith(".gguf")) rawBytes = all;
+        else b64text = new TextDecoder().decode(all);
+        from = 0.9;
+      }
+      const bytes = rawBytes || await decodeBase64(b64text.trim(), from, 0.98);
+      setProgress(0.99, "Model hazırlanıyor");
+      await tick();
+      const gg = TinyLlama.parseGGUF(bytes.buffer);
+      tok = new TinyLlama.SPMTokenizer(gg.meta);
+      model = new TinyLlama.LlamaModel(gg);
+      setProgress(1, "Hazır");
+      $("loader").hidden = true;
+      $("model").classList.add("ready");
+      $("fine").textContent = "MeteBaba-Nano hata yapabilir. Önemli bilgileri kontrol edin.";
+      canSend();
+      ta.focus({ preventScroll: true });
+    } catch (err) {
+      $("load-stage").textContent = "Model yüklenemedi";
+      $("load-sub").textContent = `${err.message}. Sayfayı yenileyip tekrar deneyin.`;
+      $("fine").textContent = "Model yüklenemedi. Sayfayı yenileyip tekrar deneyin.";
+      $("fine").classList.add("err");
+    }
+  }
+
+  load();
+})();
+</script>
+
+</body>
+</html>
