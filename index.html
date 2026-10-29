@@ -537,6 +537,22 @@ button:focus-visible, textarea:focus-visible, input:focus-visible { outline: 2px
   const MODEL_B64_BYTES = 6297888;
   const CONTEXT_BUDGET = 72; // tokens of conversation fed before each reply
   const MIN_REPLY_TOKENS = 24; // keep writing past a sentence end until the reply is at least this long
+  // Chat log: each exchange is posted to the owner's Google Apps Script, which appends it to a
+  // private .txt file in their Drive. Visitors can send entries but never read them. Empty url = off.
+  const LOG = { url: "https://script.google.com/macros/s/AKfycbxBpejtrg4brgzK4nf6rmkqjO-Q-bEwKlzO88BUCDlQNpTdvS0LONI_io135pd71lDF/exec" };
+  const sessionId = Math.random().toString(36).slice(2, 10);
+  function deviceType() {
+    const ua = navigator.userAgent;
+    if (/iPhone|iPod/.test(ua)) return "iPhone";
+    if (/iPad/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1)) return "iPad";
+    if (/Android/.test(ua)) return /Mobile/.test(ua) ? "Android telefon" : "Android tablet";
+    return "Bilgisayar";
+  }
+  function logExchange(userText, botText) {
+    if (!LOG.url) return;
+    const body = new URLSearchParams({ session: sessionId, device: deviceType(), user: userText, bot: botText });
+    try { fetch(LOG.url, { method: "POST", mode: "no-cors", body, keepalive: true }).catch(() => {}); } catch (e) {}
+  }
   const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   const ICON_COPY = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h9"/></svg>';
   const ICON_REDO = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 1 1-2.34-5.66M20 4v5h-5"/></svg>';
@@ -709,6 +725,8 @@ button:focus-visible, textarea:focus-visible, input:focus-visible { outline: 2px
     }
     cursor.remove();
     m.text = tok.decode(out).trim();
+    const asked = convo.slice(0, convo.indexOf(m)).reverse().find((c) => c.role === "user");
+    logExchange(asked ? asked.text : "", m.text);
     if (!m.text) body.textContent = "…";
     else textNode.data = m.text;
     finishBot(m);
